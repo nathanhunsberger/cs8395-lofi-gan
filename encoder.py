@@ -51,7 +51,7 @@ def find_max_frequencies(interval, framerate, freq_range=(200, 1200)):
     valid_indices = np.where((positive_frequencies >= freq_range[0]) & (positive_frequencies <= freq_range[1]))[0]
 
     # Find the indices of the top 4 frequencies within the valid range
-    top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-10:]]
+    top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-3:]]
     top_frequencies = positive_frequencies[top_indices]
     top_amplitudes = magnitude[top_indices]
 
