@@ -7,7 +7,7 @@ import numpy as np
 from scipy.signal import convolve, gaussian
 
 
-def read_wav(file_path, target_amplitude=50, window_size=20, sigma=4):
+def read_wav(file_path, target_amplitude=50, window_size=1, sigma=4):
     framerate, signal = read(file_path)
 
     # If the signal is stereo, take only one channel (convert to mono)
@@ -40,22 +40,57 @@ def divide_into_intervals(signal, framerate, interval_duration):
 import numpy as np
 
 
-def find_max_frequencies(interval, framerate, freq_range=(200, 1200)):
+# def find_max_frequencies(interval, framerate, freq_range=(100, 5000)):
+#     n = len(interval)
+#     fft_result = np.fft.fft(interval)
+#     frequencies = np.fft.fftfreq(n, d=1 / framerate)
+#     positive_frequencies = frequencies[:n // 2]
+#     magnitude = np.abs(fft_result[:n // 2])
+#
+#     # Find the indices of the frequencies within the specified range
+#     valid_indices = np.where((positive_frequencies >= freq_range[0]) & (positive_frequencies <= freq_range[1]))[0]
+#
+#     # Find the indices of the top 4 frequencies within the valid range
+#     top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-10:]]
+#     top_frequencies = positive_frequencies[top_indices]
+#     top_amplitudes = magnitude[top_indices]
+#
+#     return top_frequencies, top_amplitudes
+
+def calculate_frequency_boundaries(start_frequency, end_frequency, num_sections):
+    # Calculate the range in octaves
+    total_octaves = np.log2(end_frequency / start_frequency)
+
+    # Calculate the width of each section in octaves
+    section_width_octaves = total_octaves / num_sections
+
+    # Calculate the boundaries of each section
+    boundaries = [start_frequency * 2 ** (i * section_width_octaves) for i in range(num_sections + 1)]
+
+    return [(boundaries[i], boundaries[i + 1]) for i in range(len(boundaries) - 1)]
+
+
+regions = calculate_frequency_boundaries(100, 5000, 128)
+
+
+def find_max_frequencies(interval, framerate):
     n = len(interval)
     fft_result = np.fft.fft(interval)
     frequencies = np.fft.fftfreq(n, d=1 / framerate)
     positive_frequencies = frequencies[:n // 2]
     magnitude = np.abs(fft_result[:n // 2])
 
-    # Find the indices of the frequencies within the specified range
-    valid_indices = np.where((positive_frequencies >= freq_range[0]) & (positive_frequencies <= freq_range[1]))[0]
+    # Sum the amplitudes over each region
+    region_sums = np.zeros(len(regions))
+    for i, (start, end) in enumerate(regions):
+        region_indices = np.where((positive_frequencies >= start) & (positive_frequencies < end))[0]
+        region_sums[i] = np.sum(magnitude[region_indices]) / (end - start)
 
-    # Find the indices of the top 4 frequencies within the valid range
-    top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-3:]]
-    top_frequencies = positive_frequencies[top_indices]
-    top_amplitudes = magnitude[top_indices]
+    # Find the indices of the top 10 regions
+    top_indices = np.argsort(region_sums)[-10:]
+    top_regions = [(regions[i][0] + regions[i][1])/2 for i in top_indices]
 
-    return top_frequencies, top_amplitudes
+    return top_regions, region_sums[top_indices]
 
 
 from pydub import AudioSegment
