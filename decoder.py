@@ -1,6 +1,6 @@
 import csv
 from pydub import AudioSegment
-from pydub.generators import Sine
+from pydub.generators import Sine, Square
 
 
 def build_audio(interval_duration):
@@ -16,6 +16,7 @@ def build_audio(interval_duration):
         next(csvreader)  # Skip the header row
 
         i = 1
+        offset = 0
         for row in csvreader:
             frequencies = [float(x) for x in row[1:4]]
             volumes = [float(x) for x in row[4:]]
@@ -24,7 +25,12 @@ def build_audio(interval_duration):
                 sine_wave = Sine(freq)
                 sine_wave = sine_wave.to_audio_segment(duration=1000 * interval_duration)
                 sine_wave = sine_wave - (60 - amp / 15000 * 25)  # Adjust volume
-                output_audio = output_audio.overlay(sine_wave, position=i * 1000 * interval_duration)
+
+                # offset = (offset + 47) % 100  # Beautiful random number generator
+                desired_segment = sine_wave[offset:offset + 1000 * interval_duration]
+                output_audio = output_audio.overlay(desired_segment, position=i * 1000 * interval_duration)
+
+                # output_audio = output_audio.overlay(sine_wave, position=i * 1000 * interval_duration)
                 # print(f"  Frequency: {freq} Hz, Amplitude: {amp}")
             i +=1
 
