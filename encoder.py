@@ -1,11 +1,14 @@
 import csv
-import wave
+#import wavepi
 from pydub import AudioSegment
 import numpy as np
 from scipy.io.wavfile import read
 import numpy as np
 from scipy.signal import convolve, gaussian
+import sys, os, glob
 
+
+NUM_TO_USE = 8
 
 def read_wav(file_path, target_amplitude=50, window_size=20, sigma=4):
     framerate, signal = read(file_path)
@@ -37,9 +40,6 @@ def divide_into_intervals(signal, framerate, interval_duration):
     return intervals
 
 
-import numpy as np
-
-
 def find_max_frequencies(interval, framerate, freq_range=(200, 1200)):
     n = len(interval)
     fft_result = np.fft.fft(interval)
@@ -51,7 +51,7 @@ def find_max_frequencies(interval, framerate, freq_range=(200, 1200)):
     valid_indices = np.where((positive_frequencies >= freq_range[0]) & (positive_frequencies <= freq_range[1]))[0]
 
     # Find the indices of the top 4 frequencies within the valid range
-    top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-3:]]
+    top_indices = valid_indices[np.argsort(magnitude[valid_indices])[-1 * NUM_TO_USE:]]
     top_frequencies = positive_frequencies[top_indices]
     top_amplitudes = magnitude[top_indices]
 
@@ -62,11 +62,11 @@ from pydub import AudioSegment
 from pydub.generators import Sine
 
 
-def write_results(intervals, framerate, interval_duration):
+def write_results(intervals, framerate, interval_duration, filename):
     # Create an empty audio segment
     output_audio = AudioSegment.silent(duration=1000 * interval_duration * len(intervals))
 
-    filename = "output.csv"
+    filename = filename + ".csv"
     with open(filename, 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(['Interval', 'Frequency', 'Volume'])
@@ -79,12 +79,24 @@ def write_results(intervals, framerate, interval_duration):
             csv_row.extend(top_amplitudes)
             csvwriter.writerow(csv_row)
 
+i = 0
+csv_folder = "training_data/csvs/"
+# for file in glob.glob("training_data/wavs/*.wav"):
+#     signal, framerate = read_wav(file)
 
-file_path = 'mojito.wav'
-signal, framerate = read_wav(file_path)
+#     # Set the desired interval duration in seconds
+#     interval_duration = 0.2
+
+#     intervals = divide_into_intervals(signal, framerate, interval_duration)
+#     write_results(intervals, framerate, interval_duration, f"{csv_folder}{i}")
+#     i += 1
+
+file = "training_data/nintendo.wav"
+signal, framerate = read_wav(file)
 
 # Set the desired interval duration in seconds
 interval_duration = 0.2
 
 intervals = divide_into_intervals(signal, framerate, interval_duration)
-write_results(intervals, framerate, interval_duration)
+write_results(intervals, framerate, interval_duration, f"{csv_folder}{i}")
+i += 1
